@@ -2,7 +2,29 @@ import React, { useEffect, useState } from "react";
 import { FaEdit, FaTrash } from "react-icons/fa";
 import { FaFilter, FaPlus, FaFileExport } from "react-icons/fa";
 
+//PROGRESS
+//SUCCESS DELETE SINGLE ROWS
+//SUCCESS CREATION
+//SUCCESS FILTERS AND DATA HANLING
+
+//PENDING
+//DELETE MULTIPLE USING CHECKBOXES
+//EDITING
+
+//OTHER PAGES
+//DESIGNS AND FRONTEND STUFF :D
+
 interface Tag {
+  id: number;
+  name: string;
+}
+
+interface Category {
+  id: number;
+  name: string;
+}
+
+interface Country {
   id: number;
   name: string;
 }
@@ -13,25 +35,60 @@ interface Contact {
   last_name: string;
   email: string;
   phone_number: string;
-  tags: Tag[];
+  category: number;
+  country: number;
+  tags: number[];
+  user: number;
+}
+
+interface NewContact {
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone_number: string;
+  category: number;
+  country: number;
+  tags: number[];
   user: number;
 }
 
 const TotalContacts: React.FC = () => {
+  const [id, setId] = useState(0);
   const [contacts, setContacts] = useState<Contact[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [countries, setCountries] = useState<Country[]>([]);
+  const [tags, setTags] = useState<Tag[]>([]);
   const [selectedRows, setSelectedRows] = useState<number[]>([]);
-  const [filterTags, setFilterTags] = useState<string | null>(null);
+  const [filterCategory, setFilterCategory] = useState<string | null>(null);
   const [showConfirmation, setShowConfirmation] = useState(false);
-  const [dropdownVisible, setDropdownVisible] = useState(false); // for controlling the dropdown visibility
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [dropdownVisible, setDropdownVisible] = useState(false);
 
-  const user = localStorage.getItem("user");
-  const id = user ? JSON.parse(user).id : "";
-
-  const predefinedTags = ["Personal", "Business", "Family"]; // Predefined tags for filtering
+  const [newContact, setNewContact] = useState<NewContact>({
+    first_name: "",
+    last_name: "",
+    email: "",
+    phone_number: "",
+    category: 0,
+    country: 0,
+    tags: [],
+    user: id,
+  });
 
   useEffect(() => {
-    fetchContacts();
+    const user = localStorage.getItem("user");
+    const userId = user ? JSON.parse(user).id : "";
+    setId(userId);
   }, []);
+  
+  useEffect(() => {
+    if (id) {
+      fetchContacts();
+      fetchCategories();
+      fetchCountries();
+      fetchTags();
+    }
+  }, [id]);
 
   const fetchContacts = async () => {
     try {
@@ -52,6 +109,111 @@ const TotalContacts: React.FC = () => {
     }
   };
 
+  const fetchCategories = async () => {
+    try {
+      const response = await fetch("http://127.0.0.1:8000/api/contacts/categories/", {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+      });
+
+      const result = await response.json();
+
+      setCategories(result);
+    } catch (error) {
+      console.error("Error fetching categories:", error);
+    }
+  }
+
+  const fetchCountries = async () => {
+    try {
+      const response = await fetch("http://127.0.0.1:8000/api/contacts/country/", {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+      });
+
+      const result = await response.json();
+
+      setCountries(result);
+    } catch (error) {
+      console.error("Error fetching countries:", error);
+    }
+  }
+
+  const fetchTags = async () => {
+    try {
+      const response = await fetch("http://127.0.0.1:8000/api/contacts/tags/", {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+      });
+
+      const result = await response.json();
+
+      setTags(result);
+    } catch (error) {
+      console.error("Error fetching tags:", error);
+    }
+  }
+
+  const handleCreateClick = () => {
+    setDropdownVisible(false);
+    setIsCreateModalOpen(true);
+    setNewContact({
+      first_name: "",
+      last_name: "",
+      email: "",
+      phone_number: "",
+      category: 0,
+      country: 0,
+      tags: [],
+      user: id,
+    });
+  };
+  
+  const handleInputChange = (
+    event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
+    field: keyof Contact
+  ) => {
+    setNewContact((prev) => ({
+      ...prev,
+      [field]: event.target.value,
+    }));
+  };
+  
+  const handleSubmit = async () => {
+    try {
+      const response = await fetch("http://127.0.0.1:8000/api/contacts/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(newContact),
+      });
+  
+      if (response.ok) {
+        const createdContact = await response.json();
+        setContacts((prevContacts) => [...prevContacts, createdContact]);
+        setNewContact({
+          first_name: "",
+          last_name: "",
+          email: "",
+          phone_number: "",
+          category: 0,
+          country: 0,
+          tags: [],
+          user: id,
+        });
+        setIsCreateModalOpen(false);
+        alert("Contact created successfully!");
+      } else {
+        console.log(newContact)
+        alert("Failed to create contact. Please try again.");
+      }
+    } catch (error) {
+      console.error("Error creating contact:", error);
+      alert("Error creating contact. Please try again.");
+    }
+  };
+
   const handleSelectAll = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.checked) {
       setSelectedRows(contacts.map((contact) => contact.id));
@@ -66,9 +228,14 @@ const TotalContacts: React.FC = () => {
     );
   };
 
-  const handleFilter = (tag: string) => {
-    setFilterTags(tag);
-    setDropdownVisible(false); // Close the dropdown after selecting a filter
+  const handleFilter = (category: string) => {
+    setFilterCategory(category);
+    setDropdownVisible(false);
+  };
+
+  const handleResetFilters = () => {
+    setFilterCategory(null); // Reset filter to show all contacts
+    setDropdownVisible(false);
   };
 
   const handleDelete = () => {
@@ -107,34 +274,60 @@ const TotalContacts: React.FC = () => {
     URL.revokeObjectURL(url);
   };
 
-  const filteredContacts = filterTags
-    ? contacts.filter((contact) =>
-        contact.tags.some((tag) => tag.name === filterTags)
-      )
+  const filteredContacts = filterCategory
+    ? contacts.filter((contact) => contact.category === categories.find(category => category.name === filterCategory)?.id)
     : contacts;
+
+  const handleDeleteRow = async (id: number) => {
+    const isConfirm = confirm('Do you want to delete contact?');
+
+    if(!isConfirm) return;
+
+    try {
+      const response = await fetch(`http://127.0.0.1:8000/api/contacts/${id}`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+      });
+
+      if(response.ok){
+        fetchContacts();
+        alert("Successfully Deleted Contact");
+      } else {
+        alert("Failed to Delete Contact");
+      }
+    } catch (error) {
+      console.error("Error deleting contact:", error);
+    }
+  }
 
   return (
     <div className="p-4">
       {/* Buttons */}
       <div className="flex justify-between mb-4">
-        <div>
+      <div>
           <button
             className="bg-blue-500 text-white px-4 py-2 rounded flex items-center"
-            onClick={() => setDropdownVisible(!dropdownVisible)} // Toggle dropdown visibility
+            onClick={() => setDropdownVisible(!dropdownVisible)}
           >
             <FaFilter className="mr-2" /> Filters
           </button>
           {dropdownVisible && (
             <div className="absolute bg-white border shadow-md mt-2 p-2 rounded">
-              {predefinedTags.map((tag) => (
+              {categories.map((category) => (
                 <button
-                  key={tag}
-                  className="block text-left px-4 py-2 hover:bg-gray-200"
-                  onClick={() => handleFilter(tag)}
+                  key={category.id}
+                  className="block text-left px-4 py-2 w-full hover:bg-gray-200"
+                  onClick={() => handleFilter(category.name)}
                 >
-                  {tag}
+                  {category.name}
                 </button>
               ))}
+              <button
+                className="block text-left px-4 py-2 w-full hover:bg-gray-200 text-red-500"
+                onClick={handleResetFilters}
+              >
+                Reset
+              </button>
             </div>
           )}
         </div>
@@ -146,7 +339,10 @@ const TotalContacts: React.FC = () => {
           >
             Delete
           </button>
-          <button className="bg-green-500 text-white px-4 py-2 rounded">
+          <button
+            className="bg-green-500 text-white px-4 py-2 rounded"
+            onClick={handleCreateClick}
+          >
             <FaPlus className="mr-2" /> Create
           </button>
           <button
@@ -173,33 +369,54 @@ const TotalContacts: React.FC = () => {
             <th className="px-4 py-2">Email</th>
             <th className="px-4 py-2">Phone Number</th>
             <th className="px-4 py-2">Tags</th>
+            <th className="px-4 py-2">Category</th>
+            <th className="px-4 py-2">Country</th>
             <th className="px-4 py-2">Action</th>
           </tr>
         </thead>
         <tbody>
-          {filteredContacts.map((contact) => (
-            <tr key={contact.id} className="border-b">
-              <td className="px-4 py-2 text-center">
-                <input
-                  type="checkbox"
-                  checked={selectedRows.includes(contact.id)}
-                  onChange={() => handleSelectRow(contact.id)}
-                />
-              </td>
-              <td className="px-4 py-2">{`${contact.first_name} ${contact.last_name}`}</td>
-              <td className="px-4 py-2">{contact.email}</td>
-              <td className="px-4 py-2">{contact.phone_number}</td>
-              <td className="px-4 py-2">{contact.tags.map((tag) => tag.name).join(", ")}</td>
-              <td className="px-4 py-2 text-center">
-                <button className="text-blue-500 mr-2">
-                  <FaEdit />
-                </button>
-                <button className="text-red-500">
-                  <FaTrash />
-                </button>
-              </td>
-            </tr>
-          ))}
+          {filteredContacts.map((contact) => {
+            const categoryName = categories.find((category) => category.id === contact.category)?.name || "N/A";
+            const countryName = countries.find((country) => country.id === contact.country)?.name || "N/A";
+
+            return (
+              <tr key={contact.id}>
+                <td className="px-4 py-2">
+                  <input
+                    type="checkbox"
+                    checked={selectedRows.includes(contact.id)}
+                    onChange={() => handleSelectRow(contact.id)}
+                  />
+                </td>
+                <td className="px-4 py-2">
+                  {contact.first_name} {contact.last_name}
+                </td>
+                <td className="px-4 py-2">{contact.email}</td>
+                <td className="px-4 py-2">{contact.phone_number}</td>
+                <td className="px-4 py-2">
+                  {contact.tags
+                    .map((tagId) => tags.find((tag) => tag.id === tagId)?.name)
+                    .join(", ")}
+                </td>
+                <td className="px-4 py-2">{categoryName}</td>
+                <td className="px-4 py-2">{countryName}</td>
+                <td className="px-4 py-2 flex space-x-2">
+                  <button
+                    className="bg-blue-500 text-white px-2 py-1 rounded"
+                    onClick={() => alert("Edit contact")}
+                  >
+                    <FaEdit />
+                  </button>
+                  <button
+                    className="bg-red-500 text-white px-2 py-1 rounded"
+                    onClick={() => handleDeleteRow(contact.id)}
+                  >
+                    <FaTrash />
+                  </button>
+                </td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
 
@@ -220,6 +437,121 @@ const TotalContacts: React.FC = () => {
                 onClick={confirmDelete}
               >
                 Confirm
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isCreateModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center">
+          <div className="bg-white p-6 rounded shadow-md max-w-lg w-full overflow-auto">
+            <h2 className="text-xl mb-4">Create New Contact</h2>
+            <div className="mb-4">
+              <input
+                type="text"
+                id="first_name"
+                value={newContact.first_name}
+                placeholder="First Name"
+                onChange={(e) => handleInputChange(e, "first_name")}
+                className="border w-full p-2"
+              />
+            </div>
+            <div className="mb-4">
+              <input
+                type="text"
+                id="last_name"
+                value={newContact.last_name}
+                placeholder="Last Name"
+                onChange={(e) => handleInputChange(e, "last_name")}
+                className="border w-full p-2"
+              />
+            </div>
+            <div className="mb-4">
+              <input
+                type="email"
+                id="email"
+                value={newContact.email}
+                placeholder="Email"
+                onChange={(e) => handleInputChange(e, "email")}
+                className="border w-full p-2"
+              />
+            </div>
+            <div className="mb-4">
+              <input
+                type="text"
+                id="phone_number"
+                value={newContact.phone_number}
+                placeholder="Phone Number"
+                onChange={(e) => handleInputChange(e, "phone_number")}
+                className="border w-full p-2"
+              />
+            </div>
+            {/* Add dropdowns for category, country, and tags */}
+            <div className="mb-4">
+              <select
+                id="category"
+                value={newContact.category}
+                onChange={(e) => handleInputChange(e, "category")}
+                className="border w-full p-2"
+              >
+                <option value="">Select Category</option>
+                {categories.map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {category.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="mb-4">
+              <select
+                id="country"
+                value={newContact.country}
+                onChange={(e) => handleInputChange(e, "country")}
+                className="border w-full p-2"
+              >
+                <option value="">Select Country</option>
+                {countries.map((country) => (
+                  <option key={country.id} value={country.id}>
+                    {country.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="mb-4">
+            <select
+              id="tags"
+              multiple
+              value={newContact.tags.map((tag) => tag.toString())}
+              onChange={(e) => {
+                const selectedTagIds = Array.from(e.target.selectedOptions, (option) => parseInt(option.value));
+                setNewContact((prev) => ({
+                  ...prev,
+                  tags: selectedTagIds,
+                }));
+              }}
+              className="border w-full p-2"
+            >
+              {tags.map((tag) => (
+                <option key={tag.id} value={tag.id.toString()}>{tag.name}</option>
+              ))}
+            </select>
+            </div>
+            <div className="flex justify-between">
+              <button
+                className="bg-gray-300 text-black px-4 py-2 rounded"
+                onClick={() => {
+                  setNewContact({ ...newContact, first_name: "", last_name: "" });
+                  setIsCreateModalOpen(false);
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                className="bg-green-500 text-white px-4 py-2 rounded"
+                onClick={handleSubmit}
+              >
+                Create Contact
               </button>
             </div>
           </div>
