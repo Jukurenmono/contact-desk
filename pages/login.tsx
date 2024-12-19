@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import Link from 'next/link'
-import { useRouter } from 'next/router';
+import Link from 'next/link';
 import { FaEyeSlash } from 'react-icons/fa';
 import { FaEye } from 'react-icons/fa6';
 import { useAuth } from '@/context/AuthContext';
@@ -10,31 +9,37 @@ const Login: React.FC = () => {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const { login } = useAuth();
+  const [modalVisible, setModalVisible] = useState(false);  // Modal visibility state
 
   const Login = async () => {
     try {
       const response = await fetch('http://127.0.0.1:8000/api/contacts/users/', {
         method: 'GET',
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 'Content-Type': 'application/json' },
       });
       const result = await response.json();
-      
+
       if (response.ok) {
         const user = result.find(
-          (user: { username: string; password: string }) => 
+          (user: { username: string; password: string }) =>
             user.username === username && user.password === password
-        )
-        
-        if(user){
-          login(user);
+        );
+
+        if (user) {
+          // Show the modal for 2 seconds before logging in
+          setModalVisible(true);
+          setTimeout(() => {
+            setModalVisible(false);  // Hide modal after 2 seconds
+            login(user);  // Proceed to login after the modal disappears
+          }, 2000);
         } else {
-          console.error("No User found")
+          console.error('No User found');
         }
       }
     } catch (error) {
-        console.error('Failed to login user:', error);
+      console.error('Failed to login user:', error);
     }
-  }
+  };
 
   const togglePasswordVisibility = () => {
     setShowPassword((prev) => !prev);
@@ -46,7 +51,9 @@ const Login: React.FC = () => {
         <form className="bg-[#F0FBFF] rounded px-8 pt-6 pb-8 mb-4">
           <div>
             <img src="/contactDesk2.png" alt="Contact Desk" className="mx-auto size-5/12" />
-            <p className='text-center text-gray-500 text-sm mt-6 mb-12'>Enter your credentials to access your account</p>
+            <p className="text-center text-gray-500 text-sm mt-6 mb-12">
+              Enter your credentials to access your account
+            </p>
           </div>
           <div className="mb-4">
             <input
@@ -74,12 +81,8 @@ const Login: React.FC = () => {
               onMouseUp={togglePasswordVisibility}
               onMouseLeave={(e) => setShowPassword(false)}
               className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500 hover:text-gray-700"
-            >   
-              {showPassword ?
-               <FaEyeSlash/>
-               : 
-               <FaEye/> 
-               }
+            >
+              {showPassword ? <FaEyeSlash /> : <FaEye />}
             </button>
           </div>
 
@@ -94,17 +97,26 @@ const Login: React.FC = () => {
           </div>
 
           <div className="mt-2 text-center">
-            <Link href='/signup'>
-            <button
-              type="button"
-              className="w-full text-[#7D8CC4] hover:bg-gray-100 py-4 px-4 font-semibold text-xs rounded focus:outline-none focus:shadow-outline"
-            >
-              Sign Up
-            </button>
+            <Link href="/signup">
+              <button
+                type="button"
+                className="w-full text-[#7D8CC4] hover:bg-gray-100 py-4 px-4 font-semibold text-xs rounded focus:outline-none focus:shadow-outline"
+              >
+                Sign Up
+              </button>
             </Link>
           </div>
         </form>
       </div>
+
+      {/* Modal for Successful Login */}
+      {modalVisible && (
+        <div className="fixed inset-0 flex items-center justify-center bg-gray-800 bg-opacity-50 z-50">
+          <div className="bg-white rounded-lg shadow-xl p-6 text-center">
+            <h2 className="text-xl font-semibold text-green-600">Logged In Successfully</h2>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
